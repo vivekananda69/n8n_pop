@@ -13,9 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ===========================
 load_dotenv()
 
-TRIGGER_SECRET = os.getenv("TRIGGER_SECRET", "default-secret")
-
-
+TRIGGER_SECRET = os.getenv("TRIGGER_SECRET", "change_this_local_secret")
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:

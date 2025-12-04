@@ -2,11 +2,10 @@ from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse, HttpResponseForbidden
 from django.conf import settings
+from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
 
 from workflows.views import list_workflows
-from workflows.management.commands.fetch_workflows import Command as FetchCommand
-
 
 def home(request):
     return JsonResponse({"message": "n8n Popularity API is running"})
@@ -22,12 +21,9 @@ def trigger_fetch(request, source, country):
     if secret != settings.TRIGGER_SECRET:
         return HttpResponseForbidden("Forbidden")
 
-    if request.method != "POST":
-        return HttpResponseForbidden("POST required")
-
     try:
-        FetchCommand().handle(source=source, country=country)
-        return JsonResponse({"status": "ok", "source": source, "country": country})
+        call_command(f"fetch_{source}", country)
+        return JsonResponse({"ok": True, "source": source, "country": country})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -37,5 +33,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/workflows/", list_workflows),
     path("health/", health),
-    path("trigger-fetch/<str:source>/<str:country>/", trigger_fetch),
+    path("trigger/<str:source>/<str:country>/", trigger_fetch),
 ]
