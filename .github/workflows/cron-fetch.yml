@@ -1,15 +1,55 @@
-name: Cron Fetch Workflows
+name: n8n Popularity Auto-Fetch
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 */6 * * *"   # every 6 hours
   workflow_dispatch:
 
 jobs:
-  trigger:
+  us_youtube:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger fetch workflow on server
+      - name: Trigger US YouTube Fetch
         run: |
-          curl -X POST "${{ secrets.PROD_URL }}/trigger-fetch/" \
-            -H "X-Trigger-Secret: ${{ secrets.TRIGGER_SECRET }}"
+          curl -X POST "https://n8n-pop-3yxb.onrender.com/trigger-fetch/youtube/US/" \
+            -H "X-Trigger-Secret: ${{ secrets.RENDER_SECRET }}"
+
+  us_forum:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger US Forum Fetch
+        run: |
+          curl -X POST "https://n8n-pop-3yxb.onrender.com/trigger-fetch/forum/US/" \
+            -H "X-Trigger-Secret: ${{ secrets.RENDER_SECRET }}"
+
+  us_trends:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger US Trends Fetch
+        run: |
+          curl -X POST "https://n8n-pop-3yxb.onrender.com/trigger-fetch/trends/US/" \
+            -H "X-Trigger-Secret: ${{ secrets.RENDER_SECRET }}"
+
+  in_youtube:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger IN YouTube Fetch
+        run: |
+          curl -X POST "https://n8n-pop-3yxb.onrender.com/trigger-fetch/youtube/IN/" \
+            -H "X-Trigger-Secret: ${{ secrets.RENDER_SECRET }}"
+
+  in_forum:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger IN Forum Fetch
+        run: |
+          curl -X POST "https://n8n-pop-3yxb.onrender.com/trigger-fetch/forum/IN/" \
+            -H "X-Trigger-Secret: ${{ secrets.RENDER_SECRET }}"
+
+  in_trends:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger IN Trends Fetch
+        run: |
+          curl -X POST "https://n8n-pop-3yxb.onrender.com/trigger-fetch/trends/IN/" \
+            -H "X-Trigger-Secret: ${{ secrets.RENDER_SECRET }}"
