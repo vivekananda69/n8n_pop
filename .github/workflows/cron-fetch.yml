@@ -1,0 +1,16 @@
+name: Cron Fetch Workflows
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"   # runs every 12 hours
+  workflow_dispatch:         # manual trigger
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call Render Server to Run Fetch
+        run: |
+          curl -X POST "${{ secrets.PROD_URL }}/trigger-fetch/" \
+          -H "X-Trigger-Secret: ${{ secrets.TRIGGER_SECRET }}"
