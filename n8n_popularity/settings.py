@@ -13,6 +13,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ===========================
 load_dotenv()
 
+TRIGGER_SECRET = os.getenv("TRIGGER_SECRET")
+
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("❌ DJANGO_SECRET_KEY is not set in environment variables.")
