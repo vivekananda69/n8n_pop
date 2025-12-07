@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from workflows.collectors import collect_youtube_for_country
 from workflows.tasks import save_items
 
+
 class Command(BaseCommand):
     help = "Fetch YouTube workflows for <country>"
 
@@ -10,10 +11,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         country = options["country"]
+        self.stdout.write(f"Collecting YouTube for {country}...")
 
-        self.stdout.write(f"Collecting YouTube items for {country}...")
         items = collect_youtube_for_country(country)
+        save_items(items, "YouTube", country)
 
-        save_items(items)
-
-        self.stdout.write(self.style.SUCCESS(f"✔ Saved {len(items)} YouTube items"))
+        self.stdout.write(self.style.SUCCESS(f"Saved {len(items)} youtube items"))

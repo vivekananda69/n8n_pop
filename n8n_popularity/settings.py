@@ -3,9 +3,6 @@ import os
 from dotenv import load_dotenv
 import dj_database_url
 
-# ===========================
-# PATHS
-# ===========================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ===========================
@@ -26,8 +23,15 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 # ===========================
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-# Railway auto-assigns domain — allow all for now
 ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1"]
+
+# REQUIRED on Render — fixes 403 POST issue
+CSRF_TRUSTED_ORIGINS = [
+    "https://n8n-pop-3yxb.onrender.com"
+]
+
+# Optional but helpful for Streamlit → Django
+CORS_ALLOW_ALL_ORIGINS = True
 
 # ===========================
 # APPS
@@ -49,15 +53,17 @@ INSTALLED_APPS = [
 # ===========================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware", 
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+
+    # CSRF middleware stays enabled — trigger view is exempted manually
     "django.middleware.csrf.CsrfViewMiddleware",
+
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
 
 ROOT_URLCONF = 'n8n_popularity.urls'
 
@@ -83,7 +89,6 @@ WSGI_APPLICATION = 'n8n_popularity.wsgi.application'
 
 # ===========================
 # DATABASE
-# Railway: use SQLite OR PostgreSQL
 # ===========================
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -103,24 +108,12 @@ else:
         }
     }
 
-
-# For future PostgreSQL migration:
-# if os.getenv("DATABASE_URL"):
-#     import dj_database_url
-#     DATABASES["default"] = dj_database_url.parse(
-#         os.getenv("DATABASE_URL"),
-#         conn_max_age=600,
-#         ssl_require=False
-#     )
-
 # ===========================
 # STATIC FILES
 # ===========================
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# ===========================
-# DEFAULT FIELD
-# ===========================
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

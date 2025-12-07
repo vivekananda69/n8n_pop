@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from workflows.collectors import collect_trends
 from workflows.tasks import save_items
 
+
 class Command(BaseCommand):
     help = "Fetch Google Trends workflows for <country>"
 
@@ -10,10 +11,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         country = options["country"]
+        self.stdout.write(f"Collecting Trends for {country}...")
 
-        self.stdout.write(f"Collecting Trends items for {country}...")
         items = collect_trends(country)
+        save_items(items, "GoogleTrends", country)
 
-        save_items(items)
-
-        self.stdout.write(self.style.SUCCESS(f"✔ Saved {len(items)} Trends items"))
+        self.stdout.write(self.style.SUCCESS(f"Saved {len(items)} trends items"))

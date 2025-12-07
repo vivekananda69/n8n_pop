@@ -6,30 +6,34 @@ from workflows.collectors import (
 )
 from workflows.tasks import save_items
 
+
 class Command(BaseCommand):
-    help = "Fetch ALL workflows (YouTube, Forum, Trends) for US + IN"
+    help = "Fetch workflows from YouTube, Forum, and Google Trends for US + IN"
 
     def handle(self, *args, **options):
-        self.stdout.write("🚀 Starting full workflow collection...")
+        self.stdout.write("🚀 Starting workflow collection...")
 
-        all_items = []
+        total = 0
 
         for country in ["US", "IN"]:
-            self.stdout.write(f"\n🌎 Collecting for {country}")
+            self.stdout.write(f"🌎 Country = {country}")
 
+            self.stdout.write("  🎥 YouTube...")
             yt = collect_youtube_for_country(country)
-            self.stdout.write(f"✔ YouTube: {len(yt)} items")
-            all_items += yt
+            save_items(yt, "YouTube", country)
+            self.stdout.write(f"    → {len(yt)} youtube items")
+            total += len(yt)
 
+            self.stdout.write("  💬 Forum...")
             fr = collect_forum(country)
-            self.stdout.write(f"✔ Forum: {len(fr)} items")
-            all_items += fr
+            save_items(fr, "Forum", country)
+            self.stdout.write(f"    → {len(fr)} forum items")
+            total += len(fr)
 
+            self.stdout.write("  📈 Google Trends...")
             tr = collect_trends(country)
-            self.stdout.write(f"✔ Trends: {len(tr)} items")
-            all_items += tr
+            save_items(tr, "GoogleTrends", country)
+            self.stdout.write(f"    → {len(tr)} trends items")
+            total += len(tr)
 
-        self.stdout.write("\n💾 Saving to database...")
-        save_items(all_items)
-
-        self.stdout.write(self.style.SUCCESS(f"🎉 Done! Saved total {len(all_items)} workflows"))
+        self.stdout.write(self.style.SUCCESS(f"✔ Stored {total} workflows"))
