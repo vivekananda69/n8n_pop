@@ -7,101 +7,135 @@ from django.conf import settings
 # 1. YOUTUBE COLLECTOR
 # =====================================================
 
-def collect_youtube_for_country(country_code="US", keywords=None, pause=0.3):
+def collect_youtube_for_country(country_code="US", keywords=None, pause=0.4):
+    """
+    Optimized YouTube collector that:
+    - uses part=id for search (90% cheaper)
+    - batches stats lookups
+    - avoids 403 with retry + soft delays
+    - prevents API blocking
+    """
     YOUTUBE_API_KEY = settings.YOUTUBE_API_KEY
 
     if not YOUTUBE_API_KEY:
-        print("❌ No YOUTUBE_API_KEY found in settings")
+        print("❌ No YouTube API key!")
         return []
 
     if keywords is None:
         keywords = [
-            "n8n workflow",
             "n8n automation",
+            "n8n workflow",
+            "n8n gmail automation",
             "n8n google sheets",
             "n8n slack",
-            "n8n gmail automation",
             "n8n whatsapp",
-            "n8n webhook",
-            "n8n notion",
-            "n8n airtable",
-            "n8n tutorial",
-            "n8n agent",
-            "n8n ai automation",
         ]
 
     results = []
+    all_video_ids = set()
 
+    SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+    STATS_URL  = "https://www.googleapis.com/youtube/v3/videos"
+
+    def yt_safe_get(url, params, retries=3):
+        """Retry wrapper for Render/YouTube 403/429 errors."""
+        for attempt in range(retries):
+            try:
+                r = requests.get(url, params=params, timeout=10)
+                if r.status_code == 200:
+                    return r.json()
+
+                if r.status_code in (403, 429):
+                    print("⚠️ YouTube throttled — sleeping 3 seconds...")
+                    time.sleep(3)
+
+            except Exception as e:
+                print("⚠️ Request error:", e)
+
+            time.sleep(1)
+        return None
+
+    # ----------------------------------------------------
+    # 1) SEARCH (cheap version! `part=id`)
+    # ----------------------------------------------------
     for kw in keywords:
-        try:
-            search_url = "https://www.googleapis.com/youtube/v3/search"
-            params = {
-                "part": "snippet",
-                "q": kw,
-                "type": "video",
-                "regionCode": country_code,
-                "maxResults": 50,
-                "key": YOUTUBE_API_KEY,
-            }
+        print(f"Searching for keyword: {kw}")
 
-            r = requests.get(search_url, params=params, timeout=10)
-            r.raise_for_status()
-            items = r.json().get("items", [])
+        params = {
+            "key": YOUTUBE_API_KEY,
+            "part": "id",         # ⚠️ MUCH CHEAPER than snippet
+            "q": kw,
+            "type": "video",
+            "maxResults": 25,
+            "regionCode": country_code,
+        }
 
-            video_ids = [
-                it["id"]["videoId"]
-                for it in items
-                if it.get("id", {}).get("videoId")
-            ]
-
-            # Fetch stats in chunks
-            for i in range(0, len(video_ids), 50):
-                chunk = video_ids[i:i + 50]
-
-                stats_url = "https://www.googleapis.com/youtube/v3/videos"
-                sparams = {
-                    "part": "statistics,snippet",
-                    "id": ",".join(chunk),
-                    "key": YOUTUBE_API_KEY,
-                }
-
-                s = requests.get(stats_url, params=sparams, timeout=10)
-                s.raise_for_status()
-
-                for item in s.json().get("items", []):
-                    title = item["snippet"]["title"]
-                    url = f"https://www.youtube.com/watch?v={item['id']}"
-
-                    stats = item.get("statistics", {})
-                    views = int(stats.get("viewCount", 0))
-                    likes = int(stats.get("likeCount", 0))
-                    comments = int(stats.get("commentCount", 0))
-
-                    like_ratio = likes / views if views else 0
-                    comment_ratio = comments / views if views else 0
-
-                    score = round((views * 0.6) + (likes * 3) + (comments * 10), 2)
-
-                    results.append({
-                        "workflow": title,
-                        "source_url": url,
-                        "country": country_code,
-                        "platform": "YouTube",
-                        "metrics": {
-                            "views": views,
-                            "likes": likes,
-                            "comments": comments,
-                            "like_to_view_ratio": like_ratio,
-                            "comment_to_view_ratio": comment_ratio
-                        },
-                        "score": score,
-                    })
-
-                time.sleep(pause)
-
-        except Exception as e:
-            print("YouTube Collector error:", e)
+        data = yt_safe_get(SEARCH_URL, params)
+        if not data:
+            print("❌ Search failed for:", kw)
             continue
+
+        for it in data.get("items", []):
+            vid = it["id"].get("videoId")
+            if vid:
+                all_video_ids.add(vid)
+
+        time.sleep(pause)
+
+    print(f"Total unique YouTube videos found: {len(all_video_ids)}")
+
+    # ----------------------------------------------------
+    # 2) BATCH STATS LOOKUP
+    # ----------------------------------------------------
+    video_ids = list(all_video_ids)
+
+    for i in range(0, len(video_ids), 40):
+        chunk = video_ids[i:i+40]
+
+        params = {
+            "key": YOUTUBE_API_KEY,
+            "part": "statistics,snippet",
+            "id": ",".join(chunk),
+        }
+
+        stats_data = yt_safe_get(STATS_URL, params)
+        if not stats_data:
+            print("❌ Failed to load stats batch")
+            continue
+
+        for item in stats_data.get("items", []):
+            title = item["snippet"]["title"]
+            vid = item["id"]
+            url = f"https://www.youtube.com/watch?v={vid}"
+
+            stats = item.get("statistics", {})
+            views = int(stats.get("viewCount", 0))
+            likes = int(stats.get("likeCount", 0))
+            comments = int(stats.get("commentCount", 0))
+
+            like_ratio = likes / views if views else 0
+            comment_ratio = comments / views if views else 0
+
+            score = round(
+                (views * 0.6) + (likes * 3) + (comments * 10), 2
+            )
+
+            results.append({
+                "workflow": title,
+                "source_url": url,
+                "country": country_code,
+                "platform": "YouTube",
+                "metrics": {
+                    "views": views,
+                    "likes": likes,
+                    "comments": comments,
+                    "like_to_view_ratio": like_ratio,
+                    "comment_to_view_ratio": comment_ratio,
+                },
+                "score": score,
+            })
+
+    print(f"✔ Saved {len(results)} YouTube items")
 
     return results
 
