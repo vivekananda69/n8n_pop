@@ -1,22 +1,24 @@
-from workflows.models import Workflow
+# workflows/tasks.py
 from django.utils import timezone
+from workflows.models import Workflow
 
-def save_items(items, platform, country):
+def save_items(items):
     """
-    items = list of dicts like:
-    {
-        "workflow": "Video Title",
-        "source_url": "...",
-        "metrics": {...},
-        "score": 12.4
-    }
+    Generic saver for YouTube, Forum, GoogleTrends.
+    Each item must contain:
+      - workflow (string)
+      - platform (string)
+      - country (string)
+      - metrics (dict)
+      - score (float)
+      - source_url (string)
     """
 
     for item in items:
         Workflow.objects.update_or_create(
             workflow=item["workflow"],
-            platform=platform,
-            country=country,
+            platform=item["platform"],   # comes from collectors
+            country=item["country"],     # comes from collectors
             defaults={
                 "source_url": item.get("source_url", ""),
                 "popularity_metrics": item.get("metrics", {}),

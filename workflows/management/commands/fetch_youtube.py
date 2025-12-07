@@ -10,9 +10,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         country = options["country"]
-        self.stdout.write(f"Collecting YouTube for {country}")
-        
-        items = collect_youtube_for_country(country)
-        save_items(items, "YouTube", country)
 
-        self.stdout.write(self.style.SUCCESS(f"Saved {len(items)} youtube items"))
+        self.stdout.write(f"Collecting YouTube items for {country}...")
+        items = collect_youtube_for_country(country)
+
+        save_items(items)
+
+        self.stdout.write(self.style.SUCCESS(f"✔ Saved {len(items)} YouTube items"))
